@@ -1,0 +1,127 @@
+---
+title: "Midterm - Inequality of U.S Public Education"
+author: "John Hope (jah9kqn)"
+date: "Presentation Date: February 23rd, 2022"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+    df_print: paged
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+# Article
+
+[Article Link](https://www.kaggle.com/noriuk/us-education-datasets-unification-project?select=states_all_extended.csv)
+
+The article, authored by Alana Samuels, has an overarching focus on the jarring inequality of public school districts in Connecticut. Connecticut has been shown to have one of the best public school systems in the United States, but also one of the most unequal systems as well. There are "thousands of children here attend[ing] schools that are among the worst in the country." The author mainly attributes this intense inequality to the system in place of how public school districts are funded. In Connecticut, like many other states, public school districts are funded by local property taxes and organized by local cities and towns. The federal government only pays for about 8% of school budgets nationally, most of which is on federal programs such as reduced lunch, so the rest is on the state and towns. Areas with higher rates of poverty and lower home values will generate less property tax revenue, leading to lower school funding, leading to lower quality of education. Lower quality of education comes about, through factors such as less access to updated textbooks and computers. This reduced education quality can have lasting and generational effects, as studies show "A 20 percent increase in per-pupil spending a year for poor children can lead to an additional year of completed education, 25 percent higher earnings, and a 20-percentage-point reduction in the incidence of poverty in adulthood." However, it is difficult to change this system of funding. Resdisribution of money and resources from rich to poor districts is politically difficult and quite unpopular.
+
+**Argument: Delegating education funding to local communities increases inequality. School districts that have more funding tend to have students who perform better in school and in the future, creating a continuous cycle of poverty and educational insufficiency.**
+
+# Data
+
+- The dataset found that is relevant to the content of the article was found on Kaggle [here](https://www.kaggle.com/noriuk/us-education-datasets-unification-project?select=states_all_extended.csv). The dataset contains information regarding each U.S. state's revenues, expenditures, school enrollment, and standardized performance scores. It contains this information each year from 1992 to 2019.
+
+- Print the first 6 rows using function `head()`.
+
+```{r}
+# Readng in the data
+data <- read.csv('/Users/johnhope/Desktop/DS3003/Data/states_all.csv')
+
+# Printing first 6 rows
+head(data)
+```
+
+
+# Data Validation
+
+**Is the data type correct for this field?**
+   
+```{r, warning=FALSE, message=FALSE}
+# Access variable information
+str(data) 
+```
+- As we can see from the output, each of the fields, except for primary key and state are numeric or integer, which is correct.
+
+**Is the value within the valid range or part of a domain or enumerated list?**
+
+- Values that are not null or NA are within the valid range, with no negative numbers.
+   
+**Check for duplicates, for example of a unique key.**
+
+```{r, eval=FALSE}
+# Checking for duplicates
+unique(data)
+```
+
+- There are no duplicates, as using the unique() function did not change the data
+   
+**Check for nulls. Are there mandatory values, or are null / empty values allowed? Are the null types consistent (NaN, infinity, empty strings, etc.)?**
+
+```{r, eval=FALSE}
+# Checking for Na's
+is.na(data)
+```
+
+- There are plenty of null / empty values in this data set. Given that we want to compare different varibles within the same year (as control), and their relation to educational performance, we cannot accept these values. The values are consistent with being of NA value, To correct this we will use the na.omit() function on the dataset
+   
+
+```{r}
+```
+
+    
+# Plot 
+
+Given that we are working heavily with quantitative data, a scatterplot would work best in this situation. We want to understand the associations between variables such as funding or expenditure with educational performance scores, and using a scatterplot would allow us to do so by plotting the points and assessing the relationships present.
+
+```{r}
+library(tidyverse)
+
+population <- read.csv('/Users/johnhope/Desktop/DS3003/Data/nst-est2019-alldata.csv')
+pop2015 <- population[6:56,c(5, 13)]
+colnames(pop2015) <- c("STATE","ESTIMATE")
+pop2015$STATE <- tolower(pop2015$STATE)
+
+data2015 <- data[data$YEAR == 2015,]
+data2015 <- data2015[!(data2015$STATE == 'NATIONAL' | data2015$STATE == 'DODEA'),]
+data2015$STATE <- tolower(data2015$STATE)
+data2015$STATE <- gsub("_", " ", data2015$STATE)
+
+full2015 <- merge(data2015, pop2015, by = "STATE")
+
+full2015 <- full2015 %>%
+  mutate('PER_CAPITA_EXP' = INSTRUCTION_EXPENDITURE / ESTIMATE)
+
+```
+
+
+```{r}
+library(gridExtra)
+
+p1 <- ggplot(full2015, aes(x = PER_CAPITA_EXP, y = AVG_MATH_8_SCORE)) + geom_point(color = 'red') + theme_light() 
+p2 <- ggplot(full2015, aes(x = PER_CAPITA_EXP, y = AVG_MATH_4_SCORE)) + geom_point(color = 'blue') + theme_light()
+p3 <- ggplot(full2015, aes(x = PER_CAPITA_EXP, y = AVG_READING_8_SCORE)) + geom_point(color = 'green') + theme_light()
+p4 <- ggplot(full2015, aes(x = PER_CAPITA_EXP, y = AVG_READING_4_SCORE)) + geom_point(color = 'purple') + theme_light()
+
+grid.arrange(p1, p2, p3, p4)
+```
+

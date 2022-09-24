@@ -1,0 +1,162 @@
+---
+title: "Assignment 5 - ggplot2 (4 pts)"
+author: "Group 1, John Hope (jah9kqn)"
+date: "Due Date: 11:59pm, Feb 13"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+```{=html}
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+```
+
+
+# Part 1 
+
+- Use the occupational experience variable (“oexp”) of the income_example dataset and plot
+ 
+  + a histogram, 
+  + a kernel density estimate, 
+  + a boxplot of “oexp”, 
+  + a set of boxplots showing the distribution of “oexp” by sex crossed with occupational status (“occ”). 
+ 
+- You can either produce four separate but small plots, or you can use `gridExtra::grid.arrange(), ggpubr::ggarrange(), cowplot::plot_grid()`, or `patchwork` to create a plotting region consisting of four subplots. 
+
+- That is, you should create a ggplot version of Part 1 in Assignment 4. There is no need to describe the distributions of occupational experience in words. But make sure that you draw four plots and add x, y-labels and titles using the function `labs(x=..., y=..., title=...)`.
+
+
+```{r, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+
+#Read in income data
+income_data <- read.table('/Users/johnhope/Desktop/DS3003/Data/income_exmpl.dat', header = T, sep = "\t")
+
+#histogram
+hist<-ggplot(income_data)+geom_histogram(aes(x=oexp),bins = 25,fill="white",color="black")+theme_minimal()+labs(x="Occ. Experience (in years)",y="Frequency",title = "Histogram of Occ. Experience")+theme(plot.title = element_text(hjust = 0.5,face="bold"))
+
+#density estimate
+den<-ggplot(income_data)+geom_density(aes(x=oexp),bw=1.5)+theme_minimal()+labs(x="Occ. Experience (in years)",y="Density",title = "Density Estimate of Occ. Experience")+theme(plot.title = element_text(hjust = 0.5,face="bold"))
+
+#Boxplot
+box<-ggplot(income_data,aes(x=oexp))+geom_boxplot()+theme_bw()+labs(x="Occ. Experience (in years)",y="Density",title = "Boxplot of Occ. Experience")+theme(plot.title = element_text(hjust = 0.5,face="bold"))
+
+#set of boxplots
+set<-ggplot(income_data,aes(x=oexp,y=occ,fill=sex))+geom_boxplot()+theme_bw()+labs(x="Occ. Experience (in years)",y="",title = "Occ. Experience by Sex and Occ. Status")+theme(plot.title = element_text(hjust = 0.5,face="bold"))+scale_fill_manual(values=c("#0000ff", "#cc0000"))
+
+#Put all 4 together 
+grid.arrange(hist,den,box,set)
+```
+
+
+# Part 2
+
+- Use the SCS Data set you downloaded from Collab for Assignment 4, and investigate the relationship between the mathematics achievement score (“mathpre”) and the math anxiety score (“mars”) by plotting the data. 
+
+(i) Produce a scatterplot between “mathpre” and “mars”. You might consider using function `geom_jitter()` or the argument `alpha` from package `ggplot2` for avoiding overlying points.
+
+```{r, message=FALSE, warning=FALSE}
+# add your codes
+library(foreign)
+
+#Read in SCS data set
+scs<-read.spss("/Users/johnhope/Desktop/DS3003/Data/SCS_QE.sav",to.data.frame = TRUE)
+
+#Base scatterplot
+ggplot(scs,aes(x=mathpre,y=mars))+geom_point()+geom_jitter()+theme_minimal()+ggtitle("Scatterplot of Math Achievement Score vs. Math Anxiety Score")+xlab('Math Achievement Score')+ylab('Math Anxiety Score')+theme(plot.title = element_text(hjust = 0.5))
+```
+
+(ii) Draw a conditioning plot for female and male students (variable “male”). Add `+ facet_wrap()` or  `+ facet_grid()` in your first argument to create a conditioning plot.
+
+```{r}
+# Scatterplot conditioning on gender
+ggplot(scs,aes(x=mathpre,y=mars))+geom_point()+facet_grid(~male)+geom_jitter()+theme_minimal()+ggtitle("Scatterplot of Math Achievement Score vs. Math Anxiety Score By Gender")+xlab('Math Achievement Score')+ylab('Math Anxiety Score')+theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+# Part 3
+
+- Use the UC-Berkely Admissions dataset which is named as "UCBAdmissions" and is included in base R. This shows the number of students – male and female – who were admitted or rejected from the six largest departments at UC-Berkeley. The dataset takes a form of a three-dimensional array.
+
+- I provide codes for creating aggregated data and grouped data. If you like, you can use your own codes to construct aggregated and grouped data. Also, you can use *the rejection rate* instead of *the admission rate* to draw plots. If you like to use the rejection rate,  please use `%>% filter(Admit == "Rejected")` instead of `%>%  filter(Admit == "Admitted")`.
+
+- `dplyr` is a grammar of data manipulation. For more information about `dplyr`, 
+
+  + [R4DS - data transformation](https://r4ds.had.co.nz/transform.html)
+  + [tidyverse - dplyr](https://dplyr.tidyverse.org)
+
+
+```{r, warning=FALSE}
+data(UCBAdmissions) # load data
+
+library(broom) # load package broom
+dat <- tidy(UCBAdmissions)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# load package dplyr
+library(dplyr)
+
+# create aggregated data
+dat_agg <- dat %>% 
+  group_by(Admit, Gender) %>% 
+  summarize(n = sum(n)) %>% 
+  ungroup() %>% 
+  group_by(Gender) %>% 
+  mutate(Prop = n/sum(n)) %>% 
+  filter(Admit == "Admitted")
+
+knitr::kable(dat_agg)
+
+# create grouped data
+dat_dept <- dat %>% 
+  group_by(Gender, Dept) %>% 
+  mutate(Prop = n/sum(n)) %>% 
+  filter(Admit == "Admitted")
+
+knitr::kable(dat_dept)
+```
+- Draw plots to provide evidence of Simpson's Paradox. 
+
+```{r}
+#Read in admissions data
+UCB<-as.data.frame(UCBAdmissions)
+
+#Admissions rate vs. Gender
+ggplot(data=dat_agg, aes(x=Gender, y=Prop)) + geom_bar(stat="identity",fill=c("Red","Blue")) + xlab('Gender') + ylab('Admitted proportion') + ggtitle ('Overall admission proportion by Gender')
+```
+
+```{r}
+# Breakdown by department 
+colors<-rep(c("Red","Blue"),6)
+ggplot(data=dat_dept, aes(x=Gender, y=Prop)) + geom_bar(stat="identity", position="dodge",fill=colors)+facet_wrap(~Dept)+ xlab('Department') + ylab('Admitted proportion') + ggtitle ('Overall admission proportion by Gender in different department')
+```
+
+
+- Describe in words the relation between the admission rate and gender.
+
+There appears to be no correlation between admission rate and gender looking at the conditioning plots. 
+
+
+From the overall barplot, female students appear to have a lower admission proportion compared to that of male students. However, the conditioning plot by department shows a different distribution pattern where female students either have a similar or higher admitted proportion. The difference in admission rate and gender relationship in the two plots is especially noticeable in department A and B. Since the trend is inconsistent when groups are combined, there is evidence for Simpson's paradox.  
+

@@ -1,0 +1,264 @@
+---
+title: "Midterm - Inequality of U.S Public Education"
+author: "John Hope (jah9kqn)"
+date: "February 23rd, 2022"
+output:
+  html_document:
+    theme: flatly
+    number_sections: no
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+    df_print: paged
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 32px;
+}
+h1 {
+  font-size: 30px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+![](/Users/johnhope/Desktop/Pictures/Teachers-desk_0.png)
+
+# <span style="color: green;">Article</span>
+
+[Article Link](https://www.theatlantic.com/business/archive/2016/08/property-taxes-and-unequal-schools/497333/)
+
+I, like the majority of other students in America, attended a public school system for primary and secondary education. But, America is a country known for it's relative failures and massive inequality in public education compared to other developed countries in the world. But why is that? The article, **Good School, Rich School; Bad School, Poor School**, authored by Alana Samuels in *The Atlantic*, has an overarching focus on the jarring inequality of public school districts in Connecticut. Connecticut has been shown to have one of the best public school systems in the United States, but also one of the most unequal systems as well. There are "thousands of children here attend[ing] schools that are among the worst in the country." The author mainly attributes this intense inequality to the system in place of how public school districts are funded. In Connecticut, like many other states, public school districts are funded by local property taxes and organized by local cities and towns. The federal government only pays for about 8% of school budgets nationally, most of which is on federal programs such as reduced lunch, so the rest is on the state and towns. Areas with higher rates of poverty and lower home values will generate less property tax revenue, leading to lower school funding, leading to lower quality of education. Lower quality of education comes about, through factors such as less access to updated textbooks and computers. This reduced education quality can have lasting and generational effects, as studies show "A 20 percent increase in per-pupil spending a year for poor children can lead to an additional year of completed education, 25 percent higher earnings, and a 20-percentage-point reduction in the incidence of poverty in adulthood." However, it is difficult to change this system of funding. Resdisribution of money and resources from rich to poor districts is politically difficult and quite unpopular.
+
+**Argument: Delegating education funding to local communities increases inequality. Schools being funded by local taxes means areas with higher local taxes, and therefore more income, have more money to spend on education. School districts that have more funding tend to have students who perform better in school and in the future, creating a continuous cycle of poverty and educational insufficiency.**
+
+**My Questions: 1. Which states/communities have greater ability to raise local funds? 2. Do those states then have the ability to spend more on education? 3. How does this difference in ability to fund impact school performance?**
+
+# <span style="color: green;">Data</span>
+
+The dataset found that is relevant to the content of the article was found on Kaggle [here](https://www.kaggle.com/noriuk/us-education-datasets-unification-project?select=states_all_extended.csv). The dataset contains information regarding each U.S. state's different forms of revenue, educational expenditures, school enrollment, and standardized performance scores. Finding data on each school district and their local tax revenues and test scores could not be found, so the data will be state-wide. The data is sourced from the NCES, Census.Gov, and Nationsreportcards.gov. The NCES collects student enrollment data nationally. The Census collects financial data regarding revenues and expenditures nationally. Nationsreportcards.gov collects data regarding performance of students on standardized tests. Overall, the data is collected through survey and census data. It contains this information each year from 1992 to 2019.
+
+
+```{r}
+# Readng in the data
+data <- read.csv('/Users/johnhope/Desktop/DS3003/Data/states_all.csv')
+
+# Printing
+data
+```
+
+The data consists 1,715 rows and 25 columns. Each row represents a state and year (for example, Alabama in 1992). The most important columns we will focus on for this analysis will be 'STATE', 'LOCAL_REVENUE', 'TOTAL_EXPENDITURE', 'GRADES_ALL_G', 'AVG_MATH_4_SCORE', 'AVG_MATH_8_SCORE', 'AVG_READING_4_SCORE', and 'AVG_READING_8_SCORE'. The state column consists of all 50 states plus DC. Local revenue represents the amount of local tax revenue raised by the state. Total expenditure represents how much the state spended on educational expenses that year. The 'GRADES_ALL_G' represents the number of primary and secondary students in that state that year. The four 'score' columns represent the state's average score for fourth and eigth graders taking the NAEP math and NAEP reading exams. These variables will be important because we want to know the relationships between local tax revenues, educational spending, and academic performance. 
+
+# <span style="color: green;">Data Validation</span> {.tabset}
+
+## <span style="color: green;">Variable Types/Ranges</span>
+From our previously stated variables of interest, we can look at the str() output to validate some of the data
+```{r, warning=FALSE, message=FALSE}
+# Access variable information
+vars_of_interest <- data[,c(2,8,9,21:25)]
+str(vars_of_interest) 
+```
+As we can see from the output, each of the fields, except for state (which is a factor) are numeric, which is correct.
+
+However, we notice the state column has 53 values, more than our 50 states. There are records for "National" and "Dodea" acitivity, as well as DC. We will remove rows with these values, because we are interested in specfic states. We remove DC as well because it is funded quite differently than other states due to its scale.
+
+```{r}
+data <- data[!(data$STATE == 'NATIONAL' | data$STATE == 'DODEA' | data$STATE == 'DISTRICT_OF_COLUMBIA'),] # removing unneccesary rows
+```
+
+Values that are not null or NA within the other columns are within the valid range, with no negative numbers found in the data.
+
+## <span style="color: green;">Duplicates</span>
+```{r, warning=FALSE, message=FALSE}
+# Checking for duplicates
+paste("No duplicates: ", all.equal(unique(data), data))
+```
+
+There are no duplicates, as using the unique() function did not change the data.
+
+## <span style="color: green;">Missing Values</span>
+To check for NA's/NULLs, we can use is.na().
+   
+```{r, warning=FALSE, message=FALSE}
+# Checking for Na's
+head(data.frame(is.na(vars_of_interest)))
+```
+
+As we see above, there are plenty of NA and NULL values in this data set. Given that we want to compare different varibles within the same year (as control), and their relation to educational performance, we cannot accept these values. After analyzing the data, the most recent complete year in the data set is 2015, so we will have to subset the data to that year.
+
+```{r}
+data2015 <- data[data$YEAR == 2015,] # subsetting to 2015
+```
+
+## <span style="color: green;">Further Preperation</span>
+
+Furthermore, there is additional data preperation that is needed for this analysis. Local tax revenues are hugely dependent on population. States, such as California and New York will obviously generate more local revenues than smaller states like Wyoming and Vermont, because they have more people paying taxes. Therefore, we will need per capita measurements for revenue and expenditure measurements, to get a better sense of local tax rates. 
+
+To accomplish this, we will need population data as well. For this, population data was sourced from the Census and can be found [here](https://www.census.gov/data/tables/time-series/demo/popest/2010s-state-total.html#par_textimage). The data was subsetted to 2015 and then merged with our existing dataset to match each state and their 2015 population. With this new data, the per capita and per-student calculations could be done. Local revenue per-capita and total educational expenditure per-student for each state was found and added to new columns. Lastly, state abbreviations were added to a new column for later graphical purposes.
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+
+population <- read.csv('/Users/johnhope/Desktop/DS3003/Data/nst-est2019-alldata.csv') # read in data
+pop2015 <- population[c(6:13, 15:56), c(5, 13)] #subset 50 states and state and population columns
+colnames(pop2015) <- c("STATE","ESTIMATE") # renaming the columns
+pop2015$STATE <- tolower(pop2015$STATE) # lowering the case, to match state names
+
+data2015$STATE <- tolower(data2015$STATE) # lowering the case
+data2015$STATE <- gsub("_", " ", data2015$STATE) # replacing "_" with spaces to match state names
+
+full2015 <- merge(data2015, pop2015, by = "STATE") # merging the data
+
+state.abbs <- state.abb # state abbreviations
+
+# Creating a new column to calculate per capita instruction expenditure, and add state abb
+full2015 <- full2015 %>%
+  mutate('PER_CAPITA_REV' = LOCAL_REVENUE / ESTIMATE) %>%
+  mutate('PER_STUDENT_EXP' = TOTAL_EXPENDITURE / GRADES_ALL_G) %>%
+  mutate ('ABB' = state.abbs)
+```
+
+## <span style="color: green;">Summary Statistics</span>
+
+```{r}
+vars_of_interest <- full2015[,c(8,9,21:28)]
+round(apply(vars_of_interest, 2, mean), 2)
+```
+
+We can see the average valuues of each of the numeric variables of interest in the final dataset.
+
+# <span style="color: green;">Plots</span>
+
+## Local Revenue Bar Chart
+
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+library(gridExtra)
+library(RColorBrewer)
+
+colors <- brewer.pal(9, "Greens")[4:8] # choosing colors for plot
+
+ggplot(full2015, aes(x = STATE, y = PER_CAPITA_REV, fill = STATE)) + 
+  geom_histogram(stat = 'identity') +
+  theme_light() +
+  theme(legend.position = 'none', axis.text.x = element_blank(), axis.ticks.x = element_blank(), # removing the legend, axis text and ticks
+        panel.grid.major.x = element_blank(), text=element_text(family="AppleGothic")) +         # removing x grids aand changing font
+  labs(title = "Local Revenue per State", x = 'State', y = 'Per Capita Local Revenue')+          # labels
+  geom_text(aes(label = state.abbs, family = 'AppleGothic'), vjust = -0.2, size = 2.4) +         # adding state abbreviation labels
+  scale_y_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +                       # changing y-axis scale
+  scale_fill_manual(values = rep(colors, times=10))                                              # adding the color palette
+
+```
+
+The bar chart above gives insight into the local revenue collected per-capita in each state. Each bar in the plot is labeled with its state's abbreviation. It can be seen that states, such as New Jersey, New York, Connecticut, Illinois, and Massachusetts are leading in local revenues collected, which makes sense, because these states are especially known for notriously high property tax rates. This confirms one of the author's points that Connecticut overall has very high local taxes, as the average person in Connecticut ranks third in terms of local tax spending. With this in mind, these states will be kept in mind as we continue our analysis.   
+
+## Local Revenue and Educational Spending
+
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+library(ggrepel)
+
+cor_co <- round(cor(full2015$PER_CAPITA_REV, full2015$PER_STUDENT_EXP), 2) # correlation coefficient
+
+ggplot(full2015, aes(x = PER_CAPITA_REV, y = PER_STUDENT_EXP)) + 
+  geom_point(fill = 'springgreen4', color = 'black', pch = 21, alpha = 0.7, size = 3) + # pch = 21 to add border to point
+  theme_light() + 
+  geom_line(stat = 'smooth', method = 'lm', color = 'red', alpha = 0.75, size = 0.9) +  # adding line
+  theme(text=element_text(family="AppleGothic")) +                                      # changing font
+  labs(title = 'Education Spending vs. Local Revenue', x = 'Per Capita Local Revenue', y = 'Per Student Education Spending') + # labels
+  geom_text_repel(aes(label = state.abbs, family = 'AppleGothic'), size = 2.2, alpha = 0.9, min.segment.length = 0.31) + # point labels
+  scale_x_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +  # change x-axis scale
+  scale_y_continuous(expand = c(0,0), limits = c(5,25), minor_breaks = F) + # change y-axis scale
+  annotate('text', x=1.85, y=6, label=paste("R = ", cor_co), size=3.5, family = "AppleGothic") # add correlation coefficient to graph
+```
+
+The scatterplot displays information regarding per-capita local tax revenue and per-student educational spending for public schools in each state. Each point on the graph is labelled with its state's abbreviation, and the red line represents the regression line. As can be seen, there is a moderately strong positive association between local revenue and educational spending. In other words, as states collect more in local tax revenues, they also tend to spend more on public education. A correlation coefficient is found to be +0.64 between the two variables, which is why the relationship is moderately strong. States with high per-capita local revenues spotted in the last bar chart, like NJ, NY, and CT are spotted towards the top of public education spending. This insight confirms the author's point that districts that can raise more relative local tax revenue have greater ability for spending on public education. However, we also see that states that aren't as high in local tax revenue are still towards the top in terms of per-student spending, such as Vermont (VT), Alaska (AK), and Wyoming (WY), which is something to keep in mind
+
+
+## Local Revenue and School Performance {.tabset}
+
+
+### <span style="color: green;">4th Grade Math</span>
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+p1 <- ggplot(full2015, aes(x = PER_CAPITA_REV, y = AVG_MATH_4_SCORE)) + 
+  geom_point(fill = brewer.pal(9, "Greens")[6], color = 'black', pch = 21, size = 2) +    # scatterplot, with border on points
+  theme_light() + 
+  labs(x = 'Per Capita Local Revenue', y = '4th Grade Math Score') +                      # labels
+  geom_line(stat = 'smooth', method = 'loess', color = 'red', alpha = 0.75, size = 0.9) + # add line
+  theme(text=element_text(family="AppleGothic")) +                                        # change font
+  scale_x_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +                # change x-axis scale
+  scale_y_continuous(expand = c(0,0), limits = c(230,252), minor_breaks = F)              # change y-axis scale
+
+p1
+```
+
+### <span style="color: green;">8th Grade Math</span>
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+
+p2 <- ggplot(full2015, aes(x = PER_CAPITA_REV, y = AVG_MATH_8_SCORE)) + 
+  geom_point(fill = brewer.pal(9, "Greens")[5], color = 'black', pch = 21, size = 2) +    # scatterplot, with border on points
+  theme_light() + 
+  labs(x = 'Per Capita Local Revenue', y = '8th Grade Math Score') +                      # labels
+  geom_line(stat = 'smooth', method = 'loess', color = 'red', alpha = 0.75, size = 0.9) + # add line
+  theme(text=element_text(family="AppleGothic")) +                                        # change font
+  scale_x_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +                # change x-axis scale
+  scale_y_continuous(expand = c(0,0), limits = c(260,300), minor_breaks = F)              # change y-axis scale
+
+p2
+```
+
+
+### <span style="color: green;">4th Grade Reading</span>
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+p3 <- ggplot(full2015, aes(x = PER_CAPITA_REV, y = AVG_READING_4_SCORE)) + 
+  geom_point(fill = brewer.pal(9, "Greens")[8], color = 'black', pch = 21, size = 2) +    # scatterplot, with border on points
+  theme_light() + 
+  labs(x = 'Per Capita Local Revenue', y = '4th Grade Reading Score') +                   # labels
+  geom_line(stat = 'smooth', method = 'loess', color = 'red', alpha = 0.75, size = 0.9) + # add line
+  theme(text=element_text(family="AppleGothic")) +                                        # change font
+  scale_x_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +                # change x-axis scale
+  scale_y_continuous(expand = c(0,0), limits = c(200,240), minor_breaks = F)              # change y-axis scale
+
+p3
+```
+
+### <span style="color: green;">8th Grade Reading</span>
+```{r, warning=FALSE, message=FALSE, out.width=1000}
+p4 <- ggplot(full2015, aes(x = PER_CAPITA_REV, y = AVG_READING_8_SCORE)) + 
+  geom_point(fill = brewer.pal(9, "Greens")[7], color = 'black', pch = 21, size = 2) +    # scatterplot, with border on points
+  theme_light() + 
+  labs(x = 'Per Capita Local Revenue', y = '8th Grade Reading Score') +                   # labels
+  geom_line(stat = 'smooth', method = 'loess', color = 'red', alpha = 0.75, size = 0.9) + # add line
+  theme(text=element_text(family="AppleGothic")) +                                        # change font
+  scale_x_continuous(expand = c(0,0), limits = c(0,2), minor_breaks = F) +                # change x-axis scale
+  scale_y_continuous(expand = c(0,0), limits = c(245,280), minor_breaks = F)              # change y-axis scale
+
+p4
+```
+
+### <span style="color: green;">Correlations</span>
+```{r}
+# Find correlations for each score and local revenue
+cors <- round(cor(full2015$PER_CAPITA_REV, full2015[,22:25]), 2)
+
+# Create a data frame to hold the correlations
+data.frame('Score' = c('Math 4th', 'Math 8th', 'Reading 4th', 'Reading 8th') , 'R'=cors[1,], row.names = NULL)
+```
+
+##
+The four scatterplots here show the per-capita local revenue and average standardized test scores for each state. Each of the four graphs show an overall positive association between local revenues and test scores. The associations appear to be slightly weak to moderate. The slght exception is in the graph with 4th grade math scores, where we see a drop towards the higher revenue per-capita (x-axis) values. But for the most part, we see as states raise more tax revenue per-capita, academic performance tends to increase as well.
+
+When we look at the correlations, these points are confirmed. With correlational coefficients ranging from +0.44 to +0.52, with the exception of the 4th grade math noted prior, there is slightly weak to moderte positive associations between the local revenue and score variables being studied here.
+
+# <span style="color: green;">Conclusions & Limitations</span>
+
+From our analysis of plots in the previous section, we can commentate on how the data supports the author's arguments in their article and answers the questions of this project. The author's main point was that public school districts, supported by local tax revenue, have the potential to be highly unequal, as unequal local tax revenue raising capabilities leads to less accessible funding for public education, which in turn hinders student performance. Overall, the data generally supports this argument. The plots provided give insight to which states are most capable to raising local tax revenue, and demonstrates that most of these states also spend some of the most on per-student educational costs. We also see the vice versa, where lower local tax revenue raising states tend to spend less per-student on public educational expenses. Finally, we see a general pattern that states that raise more local tax revenue per-capita tend to perform better on standardized tests, indicating higher quality of public education. All of these findings driven through the analysis of data support what the author was arguing all along. 
+
+One limitation of this analysis was the use of state-wide data instead of district-wide data. The article argues how even school districts within the same state can differ due to local tax rvenue raising capabilities. District-wide data in each state would give us many more observations to work with, which could improve our analysis and findings.
+

@@ -1,0 +1,184 @@
+---
+title: "Create-Your-Own-Plot Assignment (4 pts per presentation date)"
+author: "John Hope (jah9kqn)"
+date: "Due Date: Feb 27th"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+# Assignment 9
+ 
+## Create your own plots for two presentations on Feb 28 (4 pts)
+
+### Presentation 1: Accidental deaths associated with an opioid overdose by Joseph Lee
+
+This presentation focuses on the issues of opioid overdoses, specifically with a comparison to motor vehicle accidental deaths. The main argument from the presentation was that accidental opiod overdose deaths were more prevelant than accidental vehicle deaths. The presentation included a series of bar plots and line plots showing the trends of overdose and vehicular deaths trends over the years since 1999
+
+```{r, warning=FALSE, message=FALSE}
+# read library
+library(tidyverse)
+setwd('/Users/johnhope/Desktop/DS3003/Assignment9/')
+
+# Read in data
+vehicle <- read.csv("car_accident.csv")
+vehicle <- vehicle[-c(5)]
+
+# Creting deaths per 1k crashes
+vehicle <- vehicle %>%
+  mutate('Deaths_per_1k_crash' = (Fatalities / Crashes) * 1000)
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+# Create plot
+ggplot(data = vehicle, aes(x = Year, y = Deaths_per_1k_crash)) + geom_bar(stat = 'identity', fill = 'red', color = 'black') + 
+  labs(y = 'Fatalities Per 1,000 Crashes', title = 'Fatality Rates Since 1999') +
+  geom_vline(xintercept = 2006, linetype="dashed", size=0.7, color='black', show.legend = F) +
+  scale_x_continuous(breaks = 1999:2014) 
+```
+
+The plot I created is a bar plot showing the fatality rate of vehicular accidents since 1999. The y-axis is the newly created variable showing the number of fatalities for every 1,000 vehicular crashes. There is a clear trend that after around 2006, the fatality rates of vehicular crashes have been steadily decreasing. This finding may add some reason the presenter's arguments that vehicular deaths are declining and becoming less prevelant than opiod overdoses. The fact that crashes are becoming less deadly may speak to enhanced vehicular safety features and heightened laws.
+
+### Presentation 2: Patterns in Breast Cancer Classification by Umar Abushaban
+
+This presentation focuses on the topic of breast cancer and how it can be used within a data science frame for visualizations, identify trend, and using classification/prediction analysis. The main argument is that variables such as tumor size are most important predictor in classifying breast cancer recurrence. The graphs in the presentation included a correlational matrix between numeric variables, scatterplots for measurements for the types of tumors, and a scatteplot between radius and concanve points.
+
+```{r, warning=FALSE, message=FALSE}
+# Read in data / prep
+data = read.csv("data.csv")
+data$diagnosis = as.factor(data$diagnosis)
+data = data[, -c(33)]
+data<-na.omit(data)
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(gridExtra)
+
+# Create plots
+p1 <- ggplot(data = data, aes(x = diagnosis, y = radius_mean, fill = diagnosis)) + geom_bar(stat = 'summary', fun.y = 'mean') + 
+  stat_summary(aes(label=round(..y.., 2)), size = 3, vjust = 1.1, geom = "text", fun = mean) + theme(legend.position = 'none') +
+  labs(x = 'Diagnosis', y = 'Tumor Radius') + scale_x_discrete(labels = c('Benign', 'Malignant'))
+
+# Create plots
+p2 <- ggplot(data = data, aes(x = diagnosis, y = texture_mean, fill = diagnosis)) + geom_bar(stat = 'summary', fun.y = 'mean') + 
+  stat_summary(aes(label=round(..y.., 2)), size = 3, vjust = 1.1, geom = "text", fun = mean) + theme(legend.position = 'none') +
+  labs(x = 'Diagnosis', y = 'Tumor Texture') + scale_x_discrete(labels = c('Benign', 'Malignant'))
+
+# Create plots
+p3 <- ggplot(data = data, aes(x = diagnosis, y = compactness_mean, fill = diagnosis)) + geom_bar(stat = 'summary', fun.y = 'mean') + 
+  stat_summary(aes(label=round(..y.., 2)), size = 3, vjust = 1.1, geom = "text", fun = mean) + theme(legend.position = 'none') +
+  labs(x = 'Diagnosis', y = 'Tumor Compactness') + scale_x_discrete(labels = c('Benign', 'Malignant'))
+
+# Create plots
+p4 <- ggplot(data = data, aes(x = diagnosis, y = concavity_mean, fill = diagnosis)) + geom_bar(stat = 'summary', fun.y = 'mean') +
+  stat_summary(aes(label=round(..y.., 2)), size = 3, vjust = 1.1, geom = "text", fun = mean) + theme(legend.position = 'none') +
+  labs(x = 'Diagnosis', y = 'Tumor Concavity') + scale_x_discrete(labels = c('Benign', 'Malignant'))
+
+# Arrange plots
+grid.arrange(p1,p2,p3,p4, top = 'Measurements for Tumor Types')
+```
+
+The plot I created focuses on different measurements for the types of diagnosis of tumors. The above series of barplots shows the average tumor radius, texture, compactness, and concavity for benign and malignant tumors. From the graph, we can see average malignant tumors have higher measurements for each measure, but the biggest disparities can be found for compactness and concavity. Malignant tumors have much higher compactness and concavity measures than benign tumors. This supports the presenter's argument that tumor radius is one of the most important indicators in cancer classification, but adds to it in what other variables are important as well.
+
+## Create your own plots for two presentations on March 2 (4 pts)
+ 
+### Presentation 1: Ferrari's Path to Recovery after a Disastrous 2020 Season by Nathan Lindley
+
+This presentation focuses on Formula 1 races, specifically with the situation regarding Ferrari. After having a subpar 2020 season, Ferrari improved greatly to become 3rd overall in 2021. The main argument is that Ferrari has improved from their 2020 season, and is on their way to becoming the top team. The graphs included in the presentation include a series of line graphs showing the trends over the years of each team's position and points for the 2019, 2020, and 2021 season.
+
+```{r, warning=FALSE, message=FALSE}
+cdall = read.csv("constructor_standings.csv")
+const = read.csv("constructors.csv")
+races = read.csv("races.csv")
+
+## Some quick data wrangling because my data came in three separate csv files
+
+cd19_21 = cdall %>%
+  filter(raceId >= 1010 & raceId <= 1073)
+cd19_21 = merge(cd19_21,const,by='constructorId') %>%
+  select(raceId,Constructor_Name=name,points,position,wins)
+
+cd19_21 = merge(cd19_21,races,by='raceId') %>%
+  select(year,date,Circuit_Name=name,Constructor_Name,points,position,wins,raceId)
+
+cd19 = cd19_21 %>%
+  filter(year==2019)
+cd20 = cd19_21 %>%
+  filter(year==2020)
+cd21 = cd19_21 %>%
+  filter(year==2021)
+
+# Taking the last race results to get cumulative numbers for each season
+cd19_final = tail(cd19, 10)
+cd19_winners = cd19_final[cd19_final$wins >= 1,]
+
+cd20_final = tail(cd20, 10)
+cd20_winners = cd20_final[cd20_final$wins >= 1,]
+
+cd21_final = tail(cd21, 10)
+cd21_winners = cd21_final[cd21_final$wins >= 1,]
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+# 2019 piechart
+ggplot(data = cd19_winners, aes(x = '', y=wins, fill=Constructor_Name)) + geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) + labs(title = '2019 Race Wins', fill = 'Constructor') + theme_void() + scale_fill_brewer(palette="Set3")
+
+# 2020 piechart
+ggplot(data = cd20_winners, aes(x = '', y=wins, fill=Constructor_Name)) + geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) + labs(title = '2020 Race Wins', fill = 'Constructor') + theme_void() + scale_fill_brewer(palette="Set3")
+
+# 2021 piechart
+ggplot(data = cd21_winners, aes(x = '', y=wins, fill=Constructor_Name)) + geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) + labs(title = '2021 Race Wins', fill = 'Constructor') + theme_void() + scale_fill_brewer(palette="Set3")
+```
+
+
+To further look into the topic, I create pie charts of race wins for the 2019, 2020, and 2021 seasons. The insight we find here is that in 2019, Ferrari had a small percentage of the race wins, as they had 3 that year. In 2020, Ferrari then had no wins, which conincides with the struggle they had this season mentioned in the presentation. In this season, Mercedes dominated. Then, in 2021, despite being 3rd in overall points, had no wins again, as Red Bull and Mercedes dominated. From this we see that although Ferrari improved their overall points standings, they had no improvements in actually winning any races, which may indicate they are not that close to becoming the top in Formula 1, as winning races is necessary, which goes against the presenter's arguments.
+
+### Presentation 2: Searching for Success in the NBA Draft by Matthew Condecido
+
+This presentation focuses on the value of NBA draft picks. NBA talent tends to be highly concentrated to very high draft picks, but there are some exceptions. The main argument for this presentation is that higher draft picks will tend to perform better and be more valuable to the team they are being drafted to. The plots found in the presentation focus on win shares, and include a scatterplot of year and win shares, boxplots of win shares for each draft pick number, bar plots of win shares for different colleges, and a pie chart for each NBA team's draft pick success. 
+
+```{r, warning=FALSE, message=FALSE}
+# Read in data
+draft_data <- read.csv("draft-data-20-years.csv")
+
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+
+# Create plot
+ggplot(data = draft_data, aes(x = Pk, y = VORP)) + geom_histogram(stat = 'summary', fun.y = 'mean', color = 'black', fill = 'blue') +
+  labs(x = 'Draft Pick', y = 'VORP (Value Over Replacement Player)') + 
+  geom_vline(xintercept = 14, linetype="dashed", size=0.7, color='black', show.legend = F) +
+  geom_vline(xintercept = 30, linetype="dashed", size=0.7, color='black', show.legend = F) +
+  geom_vline(xintercept = 5, linetype="dashed", size=0.7, color='black', show.legend = F) +
+  scale_x_continuous(limits = c(0,61), breaks = c(1,5,14,30,60))
+```
+
+An interesting varible I wanted to explore more with this topic is VORP, which stands for 'Value Over Replacement Player'. This statistics represents how valuable a player's performance is, compared to the next-best, or replacement, player. This statistics takes into account player peformance and contribution as a measurement of overall value. This histogram above shows the distribution of average VORP for each draft pick number. The vertical lines seen seperate the picks into top 5 picks, other lottery picks (top 14 picks), non-lottery first round picks (15-30), and second round picks (31-60). As we can see, the top 5 picks have the highest average VORPs measures. The rest of the lottery picks have lower VORPs than top-5. The non-lottery first round picks then have lower VORPs. Finally, we see the second round picks with the lowest overall VORPs. This supports the presenter's arguments that draft pick apparently matters, as we see that higher, especially the top of the top, draft picks tend to be much more valuable than the rest of the drafted players.

@@ -1,0 +1,137 @@
+---
+title: "Assignment 10 - plotly & Uncertainty"
+author: "Group 1, John Hope (jah9kqn)"
+date: "Due Date: 11:59pm, Mar 20"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+```
+
+## Group Homework 
+
+
+# Part 1 
+
+
+##  Part 1: Results
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse) # load tidyr package
+library(plotly) # load plotly package
+
+data(EuStockMarkets) # load EuStockMarkets
+dat <- as.data.frame(EuStockMarkets) # coerce it to a data frame
+dat$time <- time(EuStockMarkets) # add `time` variable
+
+# Converting to long-dformat
+new_data<-gather(data=dat,key = "Stock",value = "Price",1:4)
+
+# Setting colors
+colors<-c("firebrick2","dodgerblue3","mediumseagreen","magenta4")
+
+# Create plot
+plot_ly(x=new_data$time, y=new_data$Price, color = ~new_data$Stock, 
+        colors = colors ,type = "scatter",mode="lines") %>% 
+  layout(title="",xaxis=list(title = list(text = "time")),yaxis=list(title=list(text="price"))) 
+```
+
+# Part 2
+
+
+```{r, message=FALSE, warning=FALSE}
+library(foreign)
+library(boot)
+
+# Read data
+scs <- read.spss("/Users/johnhope/Desktop/DS3003/Data/SCS_QE.sav", to.data.frame=TRUE)
+
+# Bootstrap function
+b.stat <- function(data, i)
+{
+   b.dat <- data[i ,]
+   out.lm <- lm(mathpre ~ mars, b.dat)
+   predict(out.lm, data.frame(mars=scs$mars))   
+}
+
+# 2000 replicas
+b.out <- boot(scs, b.stat, R = 2000)
+
+# Bounds
+b.ci <- t(sapply(1:nrow(scs), function(x) boot.ci(b.out, index = x, type = 'perc')$percent))[, 4:5]
+
+# Rename columns
+dimnames(b.ci) <- list(rownames(scs), c('lower', 'upper'))
+
+# Bind data
+scs2 <- cbind(scs, b.ci)
+
+# Create plot
+ggplot(scs2, aes(x=mars, y=mathpre)) + geom_point(alpha=0.2) + labs(x = 'math anxiety ranking', y = 'math pretest score') + theme_bw() + 
+        geom_smooth(method='lm', formula= y~x, se = FALSE) +
+        geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, fill="#69b3a2")
+```
+
+# Part 3
+
+## Part 3: Instruction 
+
+- Create WHO Reporting Barplots **with error bars** separated by `WHO region` using either `facet_grid` or `facet_wrap`.
+
+- First, get the latest data from from [https://covid19.who.int/table](https://covid19.who.int/table).
+      
+   - The file should likely be named "WHO COVID-19 global table data March XXth 2022 at XXXXX.csv"
+       
+   - Don't use the data that I uploaded on Collab. It's not the most recent data. 
+
+
+## Part 3: Instruction (Cont'd)
+
+- Second, create a subset including 3 countries per `WHO region` (Africa, Americas, Eastern Mediterranean, Europe, South-East Asia, Western Pacific). You can choose any three countries within each `WHO region` to compare the mortality rate (`mutate(rate = "Deaths - cumulative total"/"Cases - cumulative total")`). 
+
+- Third, draw bar plots with error bars using your subset, but adjust the graph in the facets using either `facet_grid` or `facet_wrap` (e.g., `facet_grid(~ "WHO region", scale="free")`. Please include `scale="free"` in your `facet` function.
+
+```{r, message=FALSE, warning=FALSE}
+
+# Read data
+covid <- read.csv("/Users/johnhope/Desktop/DS3003/Data/WHO-COVID-19-global-table-data.csv", 
+                  row.names = NULL)
+
+# Renaming columns
+covid<-covid %>% 
+  rename(deaths_cum_total=Deaths...cumulative.total, 
+         cases_cum_total=Cases...cumulative.total)
+colnames(covid)[1] <- 'Country'
+colnames(covid)[2] <- 'WHO_region'
+
+# Fiiltering to 3 countries per region and finding mortality rate
+covid_countries <- covid %>% 
+  filter(Country %in% c("Algeria","Congo","Liberia","Mexico","Canada",
+                        "United States of America","France","Germany",
+                        "Italy","Nepal","India","Thailand","Australia",
+                        "Republic of Korea","Singapore","Bahrain","Iraq",
+                        "Libya")) %>% 
+  mutate(rate=(deaths_cum_total)/(cases_cum_total),
+         SE= sqrt(rate*(1-rate)/(cases_cum_total)))
+
+is.nan.data.frame <- function(x){
+   do.call(cbind, lapply(x, is.nan))
+}
+
+# Create plot
+ggplot(covid_countries,aes(x=Country,y=rate))+
+   geom_bar(stat="identity")+
+   facet_grid(~WHO_region,scale="free")+
+  geom_errorbar(aes(ymin=rate-1.96*SE, 
+                    ymax=rate+1.96*SE), 
+                width=.2,
+                position=position_dodge(.9))+
+  labs(y = "Mortality rate",x="Country")+
+  theme(axis.text.x = element_text(hjust = 1))+theme(axis.text.x = element_text(angle = 45))
+```
+
+

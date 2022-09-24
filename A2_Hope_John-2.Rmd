@@ -1,0 +1,85 @@
+---
+title: "Assignment 2 - Getting Started with R (4 pts)"
+author: "John Hope (jah9kqn)"
+date: "Due Date: 11:59pm, Jan 26"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: show
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+# Read the csv file "inc_real.sav" (contains real income data) into R and then check the data by doing the following:
+
+- Print the first 6 or 10 rows of the data frame
+- Use `dim()` to determine how many rows and columns the data frame has
+- Get the variable names (use `names()`),
+- Determine the type of variables (numerical, factor, …), i.e., the structure of the data frame (`str()`).
+
+```{r, warning=FALSE, message=FALSE}
+library(foreign)
+inc_real <- read.spss('/Users/johnhope/Desktop/DS3003/Data/inc_real.sav')
+
+inc_real <- as.data.frame(inc_real) #converting to a data frame
+
+head(inc_real) #printing first 6 rows
+```
+We see the first 6 rows of the data
+
+```{r}
+dim(inc_real)
+```
+The data has 1271 rows and 8 columns
+
+```{r}
+names(inc_real)
+
+str(inc_real)
+```
+Above we see the variable names and their associated types
+
+    
+# Get the summary statistics for the variables in the data frame.
+
+```{r}
+summary(inc_real)
+```
+
+# Generate the following sequences using seq() and rep(). 
+
+- Each sequence should have a length of 20 (i.e., 20 numbers), only the first 12 numbers are shown below.
+
+   - 1 0 1 0 1 0 1 0 1 0 1 0 ….
+   - 1 1 0 0 1 1 0 0 1 1 0 0 ….
+   - 0 3 6 9 0 3 6 9 0 3 6 9 ….
+
+```{r}
+rep(c(1,0),10)
+rep(rep(1:0, each = 2), 5)
+rep(seq(0, 9, by=3), 5)
+```
+
+# Plot a histrogram with the income variable from data. 
+
+```{r}
+hist(inc_real$income)
+```
