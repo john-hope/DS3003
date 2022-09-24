@@ -1,0 +1,352 @@
+---
+title: "Does NBA Defense Matter Anymore? The Evolution of Modern NBA Offense and Relative Importance of Defense"
+author: "John Hope (jah9kqn)"
+date: 'April 27th, 2022'
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+    df_print: paged
+    theme: cerulean
+runtime: shiny
+---
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(shiny)
+library(plotly)
+library(shinythemes)
+```
+
+![](nba_players.jpg)
+
+# Article
+
+[*You Can’t Stop NBA Offenses—and Now, You Can’t Even Hope to Contain Them*](https://www.theringer.com/nba/2018/10/30/18038802/nba-defense-offensive-boom)
+
+The article I chose is focused on the "third wave of an offensive revolution that began nearly a decade and a half ago". Playing and watching basketball for a while, I feel like I have noticed a lot of change in the way players play in the modern NBA and in general. Therefore I feel personally interested in analyzing the changes of the sport I love. The author here argues that there has been a proliferation of 3-point shooting, as well as much more court-spacing and ball movement that is making defense in the NBA harder to play than ever before. Verrier accredits the start of this offensive revolution to the “Seven Seconds or Less” Phoenix Suns, as well as new rules to promote freedom of movement. Defensive schemes have since had to change in response, with more switching and less camping in the paint. However the increase in pace of the game, the higher three-point shooting, and the modern drawing of fouls have left defenses disgruntled, making teams prioritize offense to a greater extent than defense.
+
+# Data Description
+
+The data collected was found on https://www.basketball-reference.com, which is basically a hub for all basketball data. This site contains statistics and information for each team for each season in NBA history. The data for different seasons is found on different pages on the site, so I had to gather all of the Team Basic Stats and Team Advanced Stats for each season for both the regular season and the playoffs and put it into Excel. Then in R, I joined the basic and advanced stats for both the regular season and playoffs. For this project, I decided to use data since the 1999-2000 NBA season, giving us data for the last 23 seasons. In addition, I created columns for win percentage, which is percentage of games won that season, offensive and defensive rankings of teams each season based on their ratings, as well as a few others that will be explained when we look at our variables.
+
+```{r}
+# Read in the data
+nba1 <- read.csv('nba_teams.csv')
+nba2 <- read.csv('nba_advanced.csv')
+playoffs1 <- read.csv('nba_playoffs.csv')
+playoffs2 <- read.csv('nba_playoffs_advanced.csv')
+
+# Add year column
+playoffs1$Year <- rep(2021:2000, each = 16)
+playoffs2$Year <- rep(2021:2000, each = 16)
+
+# Merge the two regular season dataframes together by team and year
+nba <- merge(nba1, nba2, by = c('Team', 'Year'))
+
+# Merge the two playoffs dataframes together by team and year
+playoffs <- merge(playoffs1, playoffs2, by = c('Tm', 'Year'))
+
+# Creating new columns for win percentage(wins / games played), assist to turnover ratio 
+# (assists / turnovers), and renaming field goal percentage and three point percentage
+nba <- nba %>%
+  mutate('win_percent' = round((100*W / (W+L)), 2)) %>%
+  mutate('AST_TOV_Ratio' = round((AST / TOV), 2)) %>%
+  mutate('PPP' = round((PTS / Pace), 4)) %>%
+  mutate('STL_PP' = round((STL / Pace), 4)) %>%
+  mutate('BLK_PP' = round((BLK / Pace), 4)) %>%
+  rename('FG_Percent' = FG., 'Threes_Made' = X3P)
+
+playoffs <- playoffs %>%
+  mutate('win_percent' = round((100*W / (W+L)), 2)) %>%
+  mutate('AST_TOV_Ratio' = round((AST / TOV), 2)) %>%
+  mutate('PPP' = round((PTS / Pace), 4)) %>%
+  mutate('STL_PP' = round((STL / Pace), 4)) %>%
+  mutate('BLK_PP' = round((BLK / Pace), 4)) %>%
+  rename('FG_Percent' = FG., 'Threes_Made' = X3P, 'Team' = Tm)
+
+# Grouping by year, and creating offensive and defensive rankings. This gives us a team's ranking for that
+# season
+nba <- nba %>%
+  group_by(Year) %>%
+  mutate('ORank' = rank(-nba[nba$Year == Year,]$ORtg, ties.method = 'min')) %>%
+  mutate('DRank' = rank(nba[nba$Year == Year,]$DRtg, ties.method = 'min'))
+
+# Grouping by year, and creating offensive and defensive rankings. This gives us a team's ranking for that
+# playoffs
+playoffs <- playoffs %>%
+  group_by(Year) %>%
+  mutate('ORank' = rank(-playoffs[playoffs$Year == Year,]$ORtg, ties.method = 'min')) %>%
+  mutate('DRank' = rank(playoffs[playoffs$Year == Year,]$DRtg, ties.method = 'min'))
+
+# Labeling the champions for the playoffs data
+for(row in 1:nrow(nba)) {
+  if (nba[row, 'Champion'] == TRUE) {
+    team <- nba[row,]$Team
+    year <- nba[row,]$Year
+    playoffs[(playoffs$Team == team) & (playoffs$Year == year),]$Champion <- TRUE
+  }
+}
+```
+
+```{r}
+# Print the data
+
+# Create ui
+ui <- fluidPage(dataTableOutput('nba'))
+
+# Create server
+server <- function(input,output){
+  output$nba <- renderDataTable(
+    nba, options = list(pageLength = 5)
+  )
+}
+
+# Create app
+shinyApp(ui = ui, server = server, options = list(height = 550))
+```
+
+The important variables that we will look at:
+
+  + **FG**: Field goals (baskets) made per game
+  + **FGA**: Field goals attempted per game
+  + **FG_Percent**: Percentage of field goals made
+  + **ORtg**: Team's offensive rating (higher is better)
+  + **PTS**: Points per game
+  + **AST**: Assists per game
+  + **Pace**: Number of possessions per game
+  + **PPP**: Points per possession
+  + **Threes_Made**: Number of three pointers made per game
+  + **AST_TOV_Ratio**: Assist to Turnover Ratio (Assist/Game divided by Turnovers/game)
+  + **DRtg**: Team's defensive rating (lower is better)
+  + **STL**: Steals per game
+  + **BLK**: Blocks per game
+  + **STL_PP**: Steals per possession
+  + **BLK_PP**: Blocks per possession
+  
+# Data Validation
+
+**Is the data type correct for this field?**
+   
+```{r, eval=FALSE}
+# Printing string output
+str(nba)
+```
+   
+   + The data is correct types. All of the fields except for team name and champion status are numeric, which is appropriate.
+
+**Is the value within the valid range or part of a domain or enumerated list?**
+   
+   + The data is within valid ranges. All of the standard statistics are positive values, and certain advanced metrics that are allowed to be negative, such as NRtg (net rating), are as so. The years are proper, and team names are appropriate
+  
+**Check for duplicates, for example of a unique key.**
+   
+```{r}
+# Seeing if all the rows of the unique dataframe equal the original dataframe
+paste("No duplicates: ", all.equal(unique(nba), nba))
+```
+   
+   + We can see there are no duplicate rows found in our data.
+
+**Check for nulls. Are there mandatory values, or are null / empty values allowed? Are the null types consistent (NaN, infinity, empty strings, etc.)?**
+   
+```{r}
+# Comparing the original dataset rows to NA omitted rows
+paste("No NAs: ", nrow(nba) == nrow(na.omit(nba)))
+```
+   
+   + There are no NA values in the data, as the dataset remains equal after na.omit()
+
+# Analysis
+
+## Team Statistics Since 2000
+
+```{r}
+
+# Create ui with tab panels for offense and defense
+ui <- navbarPage(title = "NBA Stats", theme = shinytheme("simplex"),
+                 tabPanel("Offense",
+                          selectInput("oStat", label = "Offensive Statistic",
+                                      choices = c('ORtg', 'PTS', 'AST', 'AST_TOV_Ratio',
+                                                  'Pace', 'FGA', 'PPP', 'FG_Percent',
+                                                  'Threes_Made'),
+                                      selected = 'ORtg'),
+                          radioButtons("season",label = h3(''),
+                                      choices = list("Regular Season"=1,"Playoffs"=2),
+                                      selected = 1),
+                          plotlyOutput("offenseplot")),
+                
+               tabPanel("Defense",
+                        selectInput("dStat",label = "Defensive Statistic",
+                                    choices = c('DRtg', 'STL', 'BLK', 'STL_PP', 'BLK_PP'), 
+                                    selected = 'DRtg'),
+                        radioButtons("season2",label = h3(''),
+                                      choices = list("Regular Season"=1,"Playoffs"=2),
+                                      selected = 1),
+                        plotlyOutput("defenseplot"))
+                )
+
+# Create server to render the plots for offense and defense
+server <- function(input, output){
+  
+  output$offenseplot <- renderPlotly({
+    
+    # Regular season plot
+    p1 <- ggplotly(ggplot(nba, aes_string(x = 'Year', y = input$oStat)) +
+               geom_jitter(aes(text = Team), color = 'blue', size = 2, alpha = 0.4) +
+               theme_light() + geom_line(stat = 'smooth', method = 'loess', color = 'red') +
+               labs(x = 'Year', y = input$oStat) + scale_x_continuous(breaks = 2000:2022) +
+               theme(text=element_text(family="AppleGothic"),
+                     axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)))
+    
+    # If playoffs are selected
+    if (input$season == 2){
+      
+      p1 <- ggplotly(ggplot(playoffs, aes_string(x = 'Year', y = input$oStat)) +
+                     geom_jitter(aes(color = Champion, text = Team), size = 2, alpha = 0.6) +
+                     theme_light() + geom_line(stat = 'smooth', method = 'loess', color = 'black') +
+                     labs(x = 'Year', y = input$oStat) + scale_x_continuous(breaks = 2000:2021) +
+                     theme(text=element_text(family="AppleGothic"),
+                     axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) +
+                     scale_color_manual(values=c("firebrick2", "gold2")))
+    }
+    
+    p1
+    
+  })
+  
+  output$defenseplot <- renderPlotly({
+
+    # Regular season plot
+    p2 <- ggplotly(ggplot(nba, aes_string(x = 'Year', y = input$dStat)) +
+               geom_jitter(aes(text = Team), color = 'blue', size = 2, alpha = 0.4) + 
+               theme_light() + geom_line(stat = 'smooth', method = 'loess', color = 'red') +
+               labs(x = 'Year', y = input$dStat) + scale_x_continuous(breaks = 2000:2022) +
+               theme(text=element_text(family="AppleGothic"), 
+                     axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)))
+    
+    # If playoffs are selected
+    if (input$season2 == 2){
+      
+      p2 <- ggplotly(ggplot(playoffs, aes_string(x = 'Year', y = input$dStat)) +
+                       geom_jitter(aes(color = Champion, text = Team), size = 2, alpha = 0.6) +
+                       theme_light() + geom_line(stat = 'smooth', method = 'loess', color = 'black') +
+                       labs(x = 'Year', y = input$dStat) + scale_x_continuous(breaks = 2000:2022) +
+                       theme(text=element_text(family="AppleGothic"),
+                             axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) +
+                       scale_color_manual(values=c("firebrick2", "gold2")))
+    }
+    
+    p2
+    
+  })
+}
+
+# Create shiny app
+shinyApp(ui = ui, server = server, options = list(height = 700))
+```
+
+### Analysis {.tabset}
+#### Offense
+First, we see a relatively steady increase in offensive rating and points per game from 2000 to around 2008, then a plateau from 2008 to around 2014, and an even larger increase since 2014. When looking more at the passing side of offense, we don't see much change in assists or assist to turnover ratio from 2000 to 2014, and then steady increases since 2014. So teams are scoring more and passing the ball better. Why? When we look at the pace, we a dramatic increase since around 2013, so teams have been getting more possessions and potential per game. This is shown further by the increase in field goal attempts in that time. Points per possession has also increased, but not as dramatically, which can be attributed to a slightly higher field goal percentage and the massive increases in three pointers being made.
+
+#### Defense
+Obviously with a higher offensive rating, must be higher defensive ratings. We see this in the increase in defensive ratings in a similar timeline to that of offensive rating. But this measurement is primarily indicative of points given up, not of all aspects of team defense. When we look at steals and blocks per game, we haven't seen much change despite the increasing number of possessions. So when we look at per possession measures, we see a decrease in steals per possession, and a very slight decrease in blocks per possession. 
+
+
+## Team Ratings & Win Percentage Since 2000
+
+```{r}
+# Create ui with tab panels for regular season and playoffs
+ui <- navbarPage(title = "Ratings and Winning", theme = shinytheme("simplex"),
+                 tabPanel("Regular Season", plotlyOutput("regSeason")),
+                 tabPanel("Playoffs", plotlyOutput("playoffs"))
+                )
+
+# Create server
+server <- function(input, output){
+  
+  # Modift regular season plot
+  output$regSeason <- renderPlotly({
+    
+    yearStat <- plot_ly(nba, x = ~ORtg, y = ~DRtg, z = ~win_percent,
+                        type = 'scatter3d', mode = 'markers', 
+                        hoverinfo = 'text', frame = ~Year, height = 850,
+                        text = ~paste('Offensive Rating: ', paste(ORtg,' (',ORank,') \n', sep = ''),
+                                       'Defensive Rating: ', paste(DRtg,' (',DRank,') \n', sep = ''),
+                                       'Win %: ', paste(win_percent, '% \n', sep = ''),
+                                       'Team: ', Team, sep = ''),
+                         marker = list(color = 'blue', opacity = 0.7, size = 7))
+    
+    yearStat %>% layout(scene = list(xaxis = list(title = "Offensive Rating",
+                                                  tickvals = seq(90, 120, 5),
+                                                  range = c(90,120)),
+                                      yaxis = list(title = "Defensive Rating",
+                                                  tickvals = seq(90, 120, 5),
+                                                  range = c(90,120)),
+                                      zaxis = list(title = "Win %",
+                                                   tickvals = seq(10, 100, 10),
+                                                  range = c(0,100)),
+                                      camera = list(eye = list(x = -1.75, y = 1.5, z = 0.5)),
+                                      aspectmode = 'cube'),
+                         legend = list(title = list(text='<b> Champion </b>'),
+                                       bgcolor = "#E2E2E2"),
+                         font = list(family = "AppleGothic"))
+  })
+  
+  # Modify playoffs plot
+  output$playoffs <- renderPlotly({
+    
+    yearStat2 <- plot_ly(playoffs, x = ~ORtg, y = ~DRtg, z = ~win_percent,
+                         type = 'scatter3d', mode = 'markers', color = ~Champion, hoverinfo = 'text',
+                         frame = ~Year, height = 850,
+                         colors = c('firebrick2', 'gold2'), 
+                         text = ~paste('Offensive Rating: ', paste(ORtg,' (',ORank,') \n', sep = ''),
+                                       'Defensive Rating: ', paste(DRtg,' (',DRank,') \n', sep = ''),
+                                       'Win %: ', paste(win_percent, '% \n', sep = ''),
+                                       'Team: ', Team, sep = ''),
+                         marker = list(opacity = 0.7, size = 7))
+    
+    yearStat2 %>% layout(scene = list(xaxis = list(title = "Offensive Rating",
+                                                   tickvals = seq(85,125,5),
+                                                   range = c(85, 130)),
+                                      yaxis = list(title = "Defensive Rating",
+                                                   tickvals = seq(90, 130, 5),
+                                                   range = c(90,130)),
+                                      zaxis = list(title = "Win %",
+                                                   tickvals = seq(10,100,10),
+                                                   range = c(10,100)),
+                                      camera = list(eye = list(x = -1.75, y = 1.5, z = 0.5)),
+                                      aspectmode = 'cube'),
+                         legend = list(title = list(text='<b> Champion </b>')),
+                         font = list(family = "AppleGothic"))
+  })
+}
+
+# Create app
+shinyApp(ui = ui, server = server, options = list(height = 1000))
+```
+
+When looking at our animated 3D scatter plots, we can get an idea of how all three variables relate, and how it has changed over time. The general trend we see for both the regular season and playoffs is that teams that have the best combinations of offensive and defensive ratings have the highest win percentages. Teams that have a really good offense, but a below average defense, with a few exceptions, have good, but not among the highest win percentages. However, we see that even recently, there have been teams with top defenses, but average or below average offenses that have some of the highest win percentages, like the 2020 Raptors. Specifically when looking at the playoffs plot, we see that most of the champions are the team that had the best combination of offense and defense that year, rather than a dominant offense and mediocre defense. These findings would suggest that not one of offense or defense is solely more important than the other in the NBA, and that hasn't changed since 2000, but combinations of high levels of both are the key to winning.
+
+# Conclusion / Limitations
+
+From our analysis, we can come to certain conclusions regarding the statements made by Verrier in his article. Overall, there appears, since around 2013/2014, to have been a wave of increases in offensive statistics. Offensive rating, points per game and possession, field goal percentage, and three pointer being have all increased significantly, indicating an improvement in skill behind modern NBA offenses. In addition, the increase in both assists per game and assist to turnover ratio since a similar time alludes to the improvement in floor spacing and ball movement. In return, defenses haven't been able to do much about it. Despite the quicker pace of the game, giving more possessions, defensive measures have not increased with the offensive stats, possibly indicating lower levels of defensive success. These findings support the arguments made by the author. However, what we also find is that this doesn't make offense the end-all be-all to being a good basketball team, or more important than defense. Team that have the best combinations of offense and defense tend to have the highest win percentages and be the champions of that season, and there are still even recent cases of more defensive-focused teams performing at the top of the league and winning championships.
+
